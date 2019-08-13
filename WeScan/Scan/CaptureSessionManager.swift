@@ -60,6 +60,9 @@ final class CaptureSessionManager: NSObject, AVCaptureVideoDataOutputSampleBuffe
     /// The minimum number of time required by `noRectangleCount` to validate that no rectangles have been found.
     private let noRectangleThreshold = 3
     
+    
+    fileprivate var isCaptureInProgress: Bool = false
+    
     // MARK: Life Cycle
     
     init?(videoPreviewLayer: AVCaptureVideoPreviewLayer) {
@@ -143,9 +146,11 @@ final class CaptureSessionManager: NSObject, AVCaptureVideoDataOutputSampleBuffe
     }
     
     internal func capturePhoto() {
+        guard !isCaptureInProgress else { return }
+        
+        isCaptureInProgress = true
         guard let connection = photoOutput.connection(with: .video), connection.isEnabled, connection.isActive else {
-            let error = ImageScannerControllerError.capture
-            delegate?.captureSessionManager(self, didFailWithError: error)
+            handle(captureError: ImageScannerControllerError.capture)
             return
         }
         CaptureSession.current.setImageOrientation()
@@ -232,13 +237,17 @@ final class CaptureSessionManager: NSObject, AVCaptureVideoDataOutputSampleBuffe
         return quad
     }
     
+    fileprivate func handle(captureError: Error) {
+        isCaptureInProgress = false
+        delegate?.captureSessionManager(self, didFailWithError: captureError)
+    }
 }
 
 extension CaptureSessionManager: AVCapturePhotoCaptureDelegate {
     
     func photoOutput(_ captureOutput: AVCapturePhotoOutput, didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?, previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?, resolvedSettings: AVCaptureResolvedPhotoSettings, bracketSettings: AVCaptureBracketedStillImageSettings?, error: Error?) {
         if let error = error {
-            delegate?.captureSessionManager(self, didFailWithError: error)
+            handle(captureError: error)
             return
         }
         
@@ -250,8 +259,7 @@ extension CaptureSessionManager: AVCapturePhotoCaptureDelegate {
             let imageData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(forJPEGSampleBuffer: sampleBuffer, previewPhotoSampleBuffer: nil) {
             completeImageCapture(with: imageData)
         } else {
-            let error = ImageScannerControllerError.capture
-            delegate?.captureSessionManager(self, didFailWithError: error)
+            handle(captureError: ImageScannerControllerError.capture)
             return
         }
         
@@ -260,7 +268,7 @@ extension CaptureSessionManager: AVCapturePhotoCaptureDelegate {
     @available(iOS 11.0, *)
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let error = error {
-            delegate?.captureSessionManager(self, didFailWithError: error)
+            handle(captureError: error)
             return
         }
         
@@ -271,8 +279,7 @@ extension CaptureSessionManager: AVCapturePhotoCaptureDelegate {
         if let imageData = photo.fileDataRepresentation() {
             completeImageCapture(with: imageData)
         } else {
-            let error = ImageScannerControllerError.capture
-            delegate?.captureSessionManager(self, didFailWithError: error)
+            handle(captureError: ImageScannerControllerError.capture)
             return
         }
     }
@@ -283,12 +290,8 @@ extension CaptureSessionManager: AVCapturePhotoCaptureDelegate {
         DispatchQueue.global(qos: .background).async { [weak self] in
             CaptureSession.current.isEditing = true
             guard let image = UIImage(data: imageData) else {
-                let error = ImageScannerControllerError.capture
                 DispatchQueue.main.async {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.delegate?.captureSessionManager(strongSelf, didFailWithError: error)
+                    self?.handle(captureError: ImageScannerControllerError.capture)
                 }
                 return
             }
@@ -314,6 +317,7 @@ extension CaptureSessionManager: AVCapturePhotoCaptureDelegate {
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.isCaptureInProgress = false
                 strongSelf.delegate?.captureSessionManager(strongSelf, didCapturePicture: image, withQuad: quad)
             }
         }
