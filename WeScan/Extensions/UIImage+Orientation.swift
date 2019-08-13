@@ -14,7 +14,7 @@ extension UIImage {
     func applyingPortraitOrientation() -> UIImage {
         switch imageOrientation {
         case .up:
-            return rotated(by: Measurement(value: Double.pi, unit: .radians), options: []) ?? self
+            return self
         case .down:
             return rotated(by: Measurement(value: Double.pi, unit: .radians), options: [.flipOnVerticalAxis, .flipOnHorizontalAxis]) ?? self
         case .left:
