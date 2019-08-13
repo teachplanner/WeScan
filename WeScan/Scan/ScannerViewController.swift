@@ -11,6 +11,7 @@ import AVFoundation
 
 public protocol ScannerViewControllerDelegate: class {
     func onImageReady(image: UIImage, quad: Quadrilateral?)
+    func onScanError(error: Error)
 }
 
 /// The `ScannerViewController` offers an interface to give feedback to the user regarding quadrilaterals that are detected. It also gives the user the opportunity to capture an image with a detected rectangle.
@@ -125,6 +126,7 @@ public final class ScannerViewController: UIViewController {
             let error = ImageScannerControllerError.inputDevice
             guard let captureSessionManager = captureSessionManager else { return }
             captureSessionManager.delegate?.captureSessionManager(captureSessionManager, didFailWithError: error)
+            delegate?.onScanError(error: error)
             return
         }
         
@@ -182,6 +184,7 @@ extension ScannerViewController: RectangleDetectionDelegateProtocol {
         
         guard let imageScannerController = navigationController as? ImageScannerController else { return }
         imageScannerController.imageScannerDelegate?.imageScannerController(imageScannerController, didFailWithError: error)
+        delegate?.onScanError(error: error)
     }
     
     func didStartCapturingPicture(for captureSessionManager: CaptureSessionManager) {

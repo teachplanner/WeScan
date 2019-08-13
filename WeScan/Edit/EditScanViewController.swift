@@ -11,6 +11,7 @@ import AVFoundation
 
 public protocol EditdScanViewControllerDelegate: class {
     func onScanSucceded(result: ImageScannerResults)
+    func onScanError(error: Error)
 }
 
 /// The `EditScanViewController` offers an interface for the user to edit the detected quadrilateral.
@@ -127,6 +128,7 @@ public final class EditScanViewController: UIViewController {
                 if let imageScannerController = navigationController as? ImageScannerController {
                     let error = ImageScannerControllerError.ciImageCreation
                     imageScannerController.imageScannerDelegate?.imageScannerController(imageScannerController, didFailWithError: error)
+                    delegate?.onScanError(error: error)
                 }
                 return
         }
