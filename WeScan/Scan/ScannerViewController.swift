@@ -32,7 +32,7 @@ public final class ScannerViewController: UIViewController {
     private let visualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
     
     /// Whether flash is enabled
-    private var flashEnabled = false
+    public private(set) var flashEnabled = false
     
     lazy private var activityIndicator: UIActivityIndicatorView = {
         let activityIndicator = UIActivityIndicatorView(style: .gray)
